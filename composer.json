@@ -1,0 +1,21 @@
+{
+    "name": "crodas/cli",
+    "description": "Simple and silly abstraction on top of symfony/console",
+    "require": {
+        "symfony/console": "*",
+        "crodas/notoj": "*"
+    },
+    "license": "BSD",
+    "authors": [
+        {
+            "name": "César D. Rodas",
+            "email": "crodas@php.net"
+        }
+    ],
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-0": {
+            "crodas": "lib/"
+        }
+    }
+}
