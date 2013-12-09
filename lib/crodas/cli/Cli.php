@@ -91,7 +91,11 @@ class Cli
                     if ($ann == 'Arg') {
                         $zargs[] = new $class($name, $flag, $hint);
                     } else {
-                        $zargs[] = new $class($name, null, $flag, $hint);
+                        if (!empty($args['default'])) {
+                            $zargs[] = new $class($name, null, InputOption::VALUE_OPTIONAL, $hint, $args['default']);
+                        } else {
+                            $zargs[] = new $class($name, null, $flag, $hint);
+                        }
                     }
                 }
             }
@@ -110,7 +114,7 @@ class Cli
                             $class = $annotation['class'];
                             $callback = [new $class, $annotation['function']];
                         }
-                        call_user_func($annotation['function'], $input, $output);
+                        call_user_func($callback, $input, $output);
                     });
             }
         }
