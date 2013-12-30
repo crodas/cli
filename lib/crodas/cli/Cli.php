@@ -110,7 +110,7 @@ class Cli
                             $class = $annotation['class'];
                             $callback = [new $class, $annotation['function']];
                         }
-                        call_user_func($annotation['function'], $input, $output);
+                        call_user_func($callback, $input, $output);
                     });
             }
         }
