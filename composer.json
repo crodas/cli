@@ -3,10 +3,10 @@
     "description": "Simple and silly abstraction on top of symfony/console",
     "require": {
         "symfony/console": "*",
-        "crodas/notoj": "*"
+        "crodas/notoj": "1.0.x-dev"
     },
     "license": "BSD-4-Clause",
-    "version": "v0.1.1",
+    "version": "v0.1.2",
     "authors": [
         {
             "name": "César D. Rodas",

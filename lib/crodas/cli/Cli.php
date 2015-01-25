@@ -60,24 +60,16 @@ class Cli
 
     public function main()
     {
-        $annotations = new Annotations;
-        foreach ($this->dirs as $dir) {
-            $scanner = new Dir($dir);
-            if ($this->cache) {
-                $scanner->setCache($this->cache);
-            } 
-            $scanner->getAnnotations($annotations);
-        }
-
+        $dirAnn  = new Dir($this->dirs);
         $Arg     = new \ReflectionClass('Symfony\Component\Console\Input\InputArgument');
         $Option  = new \ReflectionClass('Symfony\Component\Console\Input\InputOption'); 
         $console = new Application();
-        foreach ($annotations->get('Cli') as $annotation) {
+        foreach (array_merge($dirAnn->getMethods('Cli'), $dirAnn->getFunctions('Cli')) as $function) {
             $zargs = [];
             foreach (array('Arg' => 'InputArgument', 'Option' => 'InputOption') as $ann => $class) {
                 $class = 'Symfony\Component\Console\Input\\' . $class;
-                foreach ($annotation->get($ann) as $args) {
-                    $args = $args['args']; 
+                foreach ($function->get($ann) as $args) {
+                    $args = $args->GetArgs();
                     $name = current($args);
                     $flag = NULL;
                     if (!empty($args[1])) {
@@ -100,19 +92,20 @@ class Cli
                 }
             }
 
-            foreach ($annotation->get('Cli') as $args) {
-                $name = current($args['args'] ?: []);
-                $desc = !empty($args['args'][1]) ? $args['args'][1] : '';
+            foreach ($function->get('Cli') as $annotation) {
+                $args = $annotation->GetArgs();
+                $name = current($args ?: []);
+                $desc = !empty($args[1]) ? $args[1] : '';
                 $console->register($name)
                     ->setDescription($desc)
                     ->setDefinition($zargs)
-                    ->setCode(function($input, $output) use ($annotation) {
-                        require $annotation['file'];
-                        if (empty($annotation['class'])) {
-                            $callback = $annotation['function'];
+                    ->setCode(function($input, $output) use ($function) {
+                        require $function->getFile();
+                        if ($function instanceof \Notoj\Object\zFunction) {
+                            $callback = $function->getName();
                         } else {
-                            $class = $annotation['class'];
-                            $callback = [new $class, $annotation['function']];
+                            $class = $annotation->getClass()->getName();
+                            $callback = [new $class, $function->GetName()];
                         }
                         call_user_func($callback, $input, $output);
                     });
