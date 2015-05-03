@@ -3,7 +3,7 @@
     "description": "Simple and silly abstraction on top of symfony/console",
     "require": {
         "symfony/console": "*",
-        "crodas/notoj": "1.0.x-dev"
+        "crodas/notoj": "~1.0"
     },
     "license": "BSD-4-Clause",
     "version": "v0.1.2",
