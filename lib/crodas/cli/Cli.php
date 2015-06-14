@@ -36,6 +36,7 @@
 */
 namespace crodas\cli;
 
+use ReflectionClass;
 use Notoj\Annotations;
 use Notoj\Dir;
 use Symfony\Component\Console\Application;
@@ -58,13 +59,13 @@ class Cli
         return $this;
     }
 
-    public function main()
+    public function prepare()
     {
         $dirAnn  = new Dir($this->dirs);
-        $Arg     = new \ReflectionClass('Symfony\Component\Console\Input\InputArgument');
-        $Option  = new \ReflectionClass('Symfony\Component\Console\Input\InputOption'); 
+        $Arg     = new ReflectionClass('Symfony\Component\Console\Input\InputArgument');
+        $Option  = new ReflectionClass('Symfony\Component\Console\Input\InputOption'); 
         $console = new Application();
-        foreach (array_merge($dirAnn->getMethods('Cli'), $dirAnn->getFunctions('Cli')) as $function) {
+        foreach ($dirAnn->getCallable('Cli') as $function) {
             $zargs = [];
             foreach (array('Arg' => 'InputArgument', 'Option' => 'InputOption') as $ann => $class) {
                 $class = 'Symfony\Component\Console\Input\\' . $class;
@@ -100,19 +101,17 @@ class Cli
                     ->setDescription($desc)
                     ->setDefinition($zargs)
                     ->setCode(function($input, $output) use ($function) {
-                        require $function->getFile();
-                        if ($function instanceof \Notoj\Object\zFunction) {
-                            $callback = $function->getName();
-                        } else {
-                            $class = $annotation->getClass()->getName();
-                            $callback = [new $class, $function->GetName()];
-                        }
-                        call_user_func($callback, $input, $output);
+                        return $function->exec($input, $output);
                     });
             }
         }
 
-        $console->run();
+        return $console;
+    }
+
+    public function main()
+    {
+        $this->prepare()->run();
     }
 }
 
