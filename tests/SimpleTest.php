@@ -97,6 +97,17 @@ class SimpleTest extends PHPUnit_Framework_Testcase
      *  @dataProvider app
      *  @expectedException RuntimeException
      */
+    public function testAppWithArgsTooMuchArgs($app)
+    {
+        $input = new ArgvInput(array(__FILE__, 's:w', uniqid(true), uniqid(true)));
+        $output = new ConsoleOutput();
+        $app->find('s:w')->run($input, $output);
+    }
+
+    /**
+     *  @dataProvider app
+     *  @expectedException RuntimeException
+     */
     public function testAppWithArgsExceptionn($app)
     {
         $input = new ArgvInput(array(__FILE__, 's:w'));
