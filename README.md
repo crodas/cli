@@ -55,3 +55,5 @@ Benefits
    - No conventions to follow
 2. It can use some cache function to avoid scanning lots of directories and files everytime.
 3. Annotations :-)
+4. Plugins support
+    1. `@One` or `@Crontab` make sure your command runs just once
