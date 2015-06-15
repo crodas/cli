@@ -1,7 +1,7 @@
 <?php
 /*
   +---------------------------------------------------------------------------------+
-  | Copyright (c) 2013 César Rodas                                                  |
+  | Copyright (c) 2015 César Rodas                                                  |
   +---------------------------------------------------------------------------------+
   | Redistribution and use in source and binary forms, with or without              |
   | modification, are permitted provided that the following conditions are met:     |
@@ -39,18 +39,21 @@ namespace crodas\cli;
 use ReflectionClass;
 use Notoj\Annotations;
 use Notoj\Dir;
+use Notoj\Object\zCallable;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 
 class Cli
 {
+    protected $plugins = array();
     protected $dirs = array();
     protected $cache = null;
 
     public function __construct($cache = null)
     {
         $this->cache = $cache;
+        $this->dirs  = array(__DIR__);
     }
 
     public function addDirectory($dir)
@@ -59,51 +62,88 @@ class Cli
         return $this;
     }
 
+    protected function processCommandArgs(Array &$opts, $ann, ReflectionClass $reflection, zCallable $function)
+    { 
+        foreach ($function->get($ann) as $opt) {
+            $args = array_values($opt->GetArgs());
+            $name = $args[0];
+            $hint = empty($args[2]) ? $name : $args[2];
+            $flag = 0;
+
+            if (!empty($args[1])) {
+                foreach(explode("|", $args[1]) as $type) {
+                    $flag |= $reflection->getConstant($type);
+                }
+            }
+
+            if ($ann == 'Arg') {
+                $cArgs = array($name, $flag, $hint);
+            } else if (!empty($args['default'])) {
+                $cArgs = array($name, null, $flag | Input::VALUE_OPTIONAL, $hint, $args['default']);
+            } else {
+                $cArgs = array($name, null, $flag,  $hint);
+            }
+            $opts[] = $reflection->newInstanceArgs($cArgs);
+        }
+    }
+
+    protected function wrapper(zCallable $function)
+    {
+        $self = $this;
+        return function($input, $output) use ($function, $self) {
+            foreach ($self->getPlugins() as $name => $callbacks) {
+                if ($function->has($name)) {
+                    foreach ($callbacks as $callback) {
+                        $callback->exec($function, $input, $output);
+                    }
+                }
+            }
+            return $function->exec($input, $output);
+        };
+    }
+
+    protected function registerCommand(Application $app, zCallable $function, Array $opts)
+    {
+        foreach ($function->get('cli') as $ann) {
+            $args = array_values($ann->getArgs());
+            if (empty($args)) {
+                continue;
+            }
+            $app->register($args[0])
+                ->setDescription(!empty($args[1]) ? $args[1] : $args[0])
+                ->setDefinition($opts)
+                ->setCode($this->wrapper($function));
+        }
+    }
+
+    public function getPlugins()
+    {
+        return $this->plugins;
+    }
+
+    protected function loadPlugins(Dir $dir)
+    {
+        foreach ($dir->get('CliPlugin', 'Callable') as $plugin) {
+            $name = current($plugin->getArgs());
+            $this->plugins[$name][] = $plugin->getObject();
+        }
+    }
+
     public function prepare()
     {
         $dirAnn  = new Dir($this->dirs);
         $Arg     = new ReflectionClass('Symfony\Component\Console\Input\InputArgument');
         $Option  = new ReflectionClass('Symfony\Component\Console\Input\InputOption'); 
         $console = new Application();
-        foreach ($dirAnn->getCallable('Cli') as $function) {
-            $zargs = [];
-            foreach (array('Arg' => 'InputArgument', 'Option' => 'InputOption') as $ann => $class) {
-                $class = 'Symfony\Component\Console\Input\\' . $class;
-                foreach ($function->get($ann) as $args) {
-                    $args = $args->GetArgs();
-                    $name = current($args);
-                    $flag = NULL;
-                    if (!empty($args[1])) {
-                        $flag = 0;
-                        foreach(explode("|", $args[1]) as $type) {
-                            $flag |= $$ann->getConstant($type);
-                        }
-                    }
-                    $hint = empty($args[2]) ? $name : $args[2];
 
-                    if ($ann == 'Arg') {
-                        $zargs[] = new $class($name, $flag, $hint);
-                    } else {
-                        if (!empty($args['default'])) {
-                            $zargs[] = new $class($name, null, InputOption::VALUE_OPTIONAL, $hint, $args['default']);
-                        } else {
-                            $zargs[] = new $class($name, null, $flag, $hint);
-                        }
-                    }
-                }
-            }
+        $this->loadPlugins($dirAnn);
 
-            foreach ($function->get('Cli') as $annotation) {
-                $args = $annotation->GetArgs();
-                $name = current($args ?: []);
-                $desc = !empty($args[1]) ? $args[1] : '';
-                $console->register($name)
-                    ->setDescription($desc)
-                    ->setDefinition($zargs)
-                    ->setCode(function($input, $output) use ($function) {
-                        return $function->exec($input, $output);
-                    });
-            }
+        foreach ($dirAnn->getCallable('cli') as $function) {
+            $opts = [];
+            $this->processCommandArgs($opts, 'Arg', $Arg, $function);
+            $this->processCommandArgs($opts, 'Option', $Option, $function);
+
+            $this->registerCommand($console, $function, $opts);
         }
 
         return $console;

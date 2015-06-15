@@ -120,6 +120,32 @@ class SimpleTest extends PHPUnit_Framework_Testcase
      */
     public function testOne($app)
     {
+        $input = new ArgvInput(array(__FILE__, 'crontab:task1'));
+        $output = new ConsoleOutput();
+        ob_start();
+        $app->find('crontab:task1')->run($input, $output);
+        $this->assertEquals("Just run once\n", ob_get_clean());
+    }
+
+    /**
+     *  @dataProvider app
+     *  @dependsOn testOne
+     *  @expectedException RuntimeException
+     */
+    public function testOneFailure($app)
+    {
+        $input = new ArgvInput(array(__FILE__, 'crontab:task1'));
+        $output = new ConsoleOutput();
+        $app->find('crontab:task1')->run($input, $output);
+    }
+
+    /**
+     *  @Cli("crontab:task1")
+     *  @One
+     */
+    public static function _callable_just_once($input, $output)
+    {
+        echo "Just run once\n";
     }
 
     /**
