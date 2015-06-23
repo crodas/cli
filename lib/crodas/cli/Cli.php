@@ -72,14 +72,19 @@ class Cli
             $flag = null;
 
             if (!empty($args[1])) {
-                $flag      = 0;
+                $settings  = array_map('trim', explode("|", trim($args[1])));
                 $constants = $reflection->getConstants();
-                foreach(explode("|", $args[1]) as $type) {
-                    $type = strtoupper(trim($type));
-                    if (empty($type)) {
-                        throw new InvalidArgumentException("$type is not a valid constant (it can be " . implode(",", $constants) . ")"); 
+                if (count($settings) == 1 && empty($constants[$settings[0]]) && count($args) == 2) {
+                    $hint = $settings[0];
+                } else {
+                    $flag = 0;
+                    foreach($settings as $type) {
+                        $type = strtoupper(trim($type));
+                        if (empty($constants[$type])) {
+                            throw new InvalidArgumentException("$type is not a valid constant (it can be " . implode(",", $constants) . ")"); 
+                        }
+                        $flag |= $constants[$type];
                     }
-                    $flag |= $constants[$type];
                 }
             }
 
