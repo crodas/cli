@@ -37,6 +37,7 @@
 namespace crodas\cli;
 
 use ReflectionClass;
+use InvalidArgumentException;
 use Notoj\Annotations;
 use Notoj\Dir;
 use Notoj\Object\zCallable;
@@ -68,17 +69,23 @@ class Cli
             $args = array_values($opt->GetArgs());
             $name = $args[0];
             $hint = empty($args[2]) ? $name : $args[2];
-            $flag = 0;
+            $flag = null;
 
             if (!empty($args[1])) {
+                $flag      = 0;
+                $constants = $reflection->getConstants();
                 foreach(explode("|", $args[1]) as $type) {
-                    $flag |= $reflection->getConstant($type);
+                    $type = strtoupper(trim($type));
+                    if (empty($type)) {
+                        throw new InvalidArgumentException("$type is not a valid constant (it can be " . implode(",", $constants) . ")"); 
+                    }
+                    $flag |= $constants[$type];
                 }
             }
 
             if ($ann == 'Arg') {
                 $cArgs = array($name, $flag, $hint);
-            } else if (!empty($args['default'])) {
+            } else if (array_key_exists('default', $args)) {
                 $cArgs = array($name, null, $flag | Input::VALUE_OPTIONAL, $hint, $args['default']);
             } else {
                 $cArgs = array($name, null, $flag,  $hint);
