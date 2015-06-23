@@ -66,7 +66,7 @@ class Cli
     protected function processCommandArgs(Array &$opts, $ann, ReflectionClass $reflection, zCallable $function)
     { 
         foreach ($function->get($ann) as $opt) {
-            $args = array_values($opt->GetArgs());
+            $args = $opt->GetArgs();
             $name = $args[0];
             $hint = empty($args[2]) ? $name : $args[2];
             $flag = null;
@@ -86,7 +86,7 @@ class Cli
             if ($ann == 'Arg') {
                 $cArgs = array($name, $flag, $hint);
             } else if (array_key_exists('default', $args)) {
-                $cArgs = array($name, null, $flag | Input::VALUE_OPTIONAL, $hint, $args['default']);
+                $cArgs = array($name, null, $flag | InputOption::VALUE_OPTIONAL, $hint, $args['default']);
             } else {
                 $cArgs = array($name, null, $flag,  $hint);
             }
