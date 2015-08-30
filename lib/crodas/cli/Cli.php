@@ -44,6 +44,7 @@ use Notoj\Object\zCallable;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Question\Question;
 
 class Cli
 {
@@ -63,10 +64,32 @@ class Cli
         return $this;
     }
 
+    protected function processPrompt(Array &$opts, zCallable $function)
+    {
+        $questions = array();
+        foreach ($function->get('prompt') as $opt) {
+            $type = $opt->getArg();
+            $text = $opt->getArg(1);
+            $args = $opt->getArgs();
+            $question = new Question($text . ': ');
+            if (!empty($args['secret'])) {
+                $question->setHidden(true);
+            }
+            if (!empty($args['validate'])) {
+                $question->validate = constant($args['validate']);
+            }
+            $opts[] = new InputOption($type, null, InputOption::VALUE_REQUIRED, $text);
+            $questions[$type] = $question;
+        }
+
+        $function->questions = $questions;
+    }
+
     protected function processCommandArgs(Array &$opts, $ann, ReflectionClass $reflection, zCallable $function)
     { 
-        foreach ($function->get($ann) as $opt) {
-            $args = $opt->GetArgs();
+        $annotation = substr($ann, 0, 3) . "," . $ann;
+        foreach ($function->get($annotation) as $opt) {
+            $args = $opt->getArgs();
             $name = $args[0];
             $hint = empty($args[2]) ? $name : $args[2];
             $flag = null;
@@ -88,7 +111,7 @@ class Cli
                 }
             }
 
-            if ($ann == 'Arg') {
+            if ($ann == 'Argument') {
                 $cArgs = array($name, $flag, $hint);
             } else if (array_key_exists('default', $args)) {
                 $cArgs = array($name, null, $flag | InputOption::VALUE_OPTIONAL, $hint, $args['default']);
@@ -99,10 +122,10 @@ class Cli
         }
     }
 
-    protected function wrapper(zCallable $function)
+    protected function wrapper(zCallable $function, $helper)
     {
         $self = $this;
-        return function($input, $output) use ($function, $self) {
+        return function($input, $output) use ($function, $self, $helper) {
             foreach ($self->getPlugins() as $name => $callbacks) {
                 if ($function->has($name)) {
                     foreach ($callbacks as $callback) {
@@ -110,6 +133,19 @@ class Cli
                     }
                 }
             }
+
+            foreach ($function->questions as $type => $question) {
+                $value = $input->getOption($type);
+                if (!$value) {
+                    $value = $helper->ask($input, $output, $question);
+                    $input->setOption($type, $value);
+                }
+                if (!empty($question->validate) && !filter_var($value, $question->validate)) {
+                    throw new InvalidArgumentException("$value is not a valid $type");
+                }
+            }
+            
+
             return $function->exec($input, $output);
         };
     }
@@ -121,10 +157,13 @@ class Cli
             if (empty($args)) {
                 continue;
             }
+
+            $question = $app->getHelperSet()->get('question');
+
             $app->register($args[0])
                 ->setDescription(!empty($args[1]) ? $args[1] : $args[0])
                 ->setDefinition($opts)
-                ->setCode($this->wrapper($function));
+                ->setCode($this->wrapper($function, $question));
         }
     }
 
@@ -152,8 +191,9 @@ class Cli
 
         foreach ($dirAnn->getCallable('cli') as $function) {
             $opts = [];
-            $this->processCommandArgs($opts, 'Arg', $Arg, $function);
+            $this->processCommandArgs($opts, 'Argument', $Arg, $function);
             $this->processCommandArgs($opts, 'Option', $Option, $function);
+            $this->processPrompt($opts, $function);
 
             $this->registerCommand($console, $function, $opts);
         }
