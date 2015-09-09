@@ -122,6 +122,35 @@ class Cli
         }
     }
 
+    public function fork(zCallable $function, $input, $output)
+    {
+        $workers = max((int)$input->getOption('workers'), 1);
+        $pids = array();
+        for ($i = 0; $i < $workers; ++$i) {
+            $pid = pcntl_fork();
+            if ($pid > 0) {
+                $pids[] = $pid;
+            } else {
+                return $function->exec($input, $output);
+            }
+        }
+
+        while (count($pids) > 0) {
+            $pid = pcntl_wait($status, WNOHANG);
+            array_splice($pids, array_search($pid, $pids), 1);
+            if ($function->has('respawn')) {
+                $pid = pcntl_fork();
+                if ($pid > 0) {
+                    $pids[] = $pid;
+                } else {
+                    return $function->exec($input, $output);
+                }
+            }
+        }
+
+        exit;
+    }
+
     protected function wrapper(zCallable $function, $helper)
     {
         $self = $this;
@@ -145,6 +174,9 @@ class Cli
                 }
             }
             
+            if ($function->has('spawn,spawnable')) {
+                return $this->fork($function, $input, $output);
+            }
 
             return $function->exec($input, $output);
         };
@@ -180,6 +212,15 @@ class Cli
         }
     }
 
+    protected function processWorker(Array & $opts, $function)
+    {
+        if (!$function->has('spawnable,spawn')) {
+            return false;
+        }
+
+        $opts[] = new InputOption('workers', 'w', InputOption::VALUE_REQUIRED, "Spawn the commands many times", 1);
+    }
+
     public function prepare()
     {
         $dirAnn  = new Dir($this->dirs);
@@ -193,6 +234,7 @@ class Cli
             $opts = [];
             $this->processCommandArgs($opts, 'Argument', $Arg, $function);
             $this->processCommandArgs($opts, 'Option', $Option, $function);
+            $this->processWorker($opts, $function);
             $this->processPrompt($opts, $function);
 
             $this->registerCommand($console, $function, $opts);
