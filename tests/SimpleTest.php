@@ -152,6 +152,7 @@ class SimpleTest extends PHPUnit_Framework_Testcase
      *  @Cli("something:with_args")
      *  @Arg("arg1", REQUIRED)
      *  @Option('foobar', VALUE_REQUIRED|VALUE_IS_ARRAY, default=[])
+     *  @Spawnable
      */
     public static function callable_with_args(InputInterface $input, OutputInterface $output)
     {
