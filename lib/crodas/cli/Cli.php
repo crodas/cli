@@ -45,6 +45,7 @@ use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Question\Question;
+use Remember\Remember;
 
 class Cli
 {
@@ -52,9 +53,8 @@ class Cli
     protected $dirs = array();
     protected $cache = null;
 
-    public function __construct($cache = null)
+    public function __construct()
     {
-        $this->cache = $cache;
         $this->dirs  = array(__DIR__);
     }
 
@@ -204,14 +204,6 @@ class Cli
         return $this->plugins;
     }
 
-    protected function loadPlugins(Dir $dir)
-    {
-        foreach ($dir->get('CliPlugin', 'Callable') as $plugin) {
-            $name = current($plugin->getArgs());
-            $this->plugins[$name][] = $plugin->getObject();
-        }
-    }
-
     protected function processWorker(Array & $opts, $function)
     {
         if (!$function->has('spawnable,spawn')) {
@@ -223,15 +215,28 @@ class Cli
 
     public function prepare()
     {
-        $dirAnn  = new Dir($this->dirs);
+        $loader = Remember::wrap('cli', function($args, $files) {
+            $dirAnn  = new Dir($args);
+
+            return array(
+               $dirAnn->getCallable('cli'),
+               $dirAnn->get('CliPlugin', 'Callable'),
+            );
+        });
+        
         $Arg     = new ReflectionClass('Symfony\Component\Console\Input\InputArgument');
         $Option  = new ReflectionClass('Symfony\Component\Console\Input\InputOption'); 
         $console = new Application();
 
-        $this->loadPlugins($dirAnn);
+        list($functions, $plugins) = $loader($this->dirs);
 
-        foreach ($dirAnn->getCallable('cli') as $function) {
-            $opts = [];
+        foreach ($plugins as $plugin) {
+            $name = current($plugin->getArgs());
+            $this->plugins[$name][] = $plugin->getObject();
+        }
+
+        foreach ($functions as $function) {
+            $opts = array();
             $this->processCommandArgs($opts, 'Argument', $Arg, $function);
             $this->processCommandArgs($opts, 'Option', $Option, $function);
             $this->processWorker($opts, $function);
@@ -239,7 +244,7 @@ class Cli
 
             $this->registerCommand($console, $function, $opts);
         }
-
+    
         return $console;
     }
 

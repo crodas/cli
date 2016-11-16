@@ -3,11 +3,13 @@
     "description": "Simple and silly abstraction on top of symfony/console",
     "require": {
         "symfony/console": "^2.7",
-        "crodas/notoj": "^1.0.5",
-        "crodas/file-util": ">=0.1"
+        "crodas/notoj": ">=1.0.5",
+        "crodas/class-info": ">=0.2.3",
+        "crodas/file-util": ">=0.1",
+        "crodas/remember": ">=0.4.2"
     },
     "license": "BSD-4-Clause",
-    "version": "v0.1.8",
+    "version": "v0.1.9",
     "authors": [
         {
             "name": "César D. Rodas",
