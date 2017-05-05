@@ -7,7 +7,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Input\InputInterface;
 
-class SimpleTest extends PHPUnit_Framework_Testcase
+class SimpleTest extends PHPUnit\Framework\Testcase
 {
     public static function app()
     {

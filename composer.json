@@ -21,5 +21,8 @@
         "psr-0": {
             "crodas": "lib/"
         }
+    },
+    "require-dev": {
+        "crodas/phpunit-compat": "^1.7"
     }
 }
