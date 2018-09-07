@@ -19,18 +19,6 @@ class SimpleTest extends PHPUnit\Framework\TestCase
         );
     }
 
-    /**
-     * @dataProvider app
-     */
-    public function testSetup($app, Array $commands)
-    {
-        $text = $app->asText();
-        $this->assertTrue(count($commands) >= 3);
-        $this->assertTrue($app->find('something:group') instanceof Symfony\Component\Console\Command\Command);
-        $this->assertEquals($app->find('s:g'), $app->find('something:group'));
-        $this->assertTrue(strpos($text, '<comment>something</comment>') > 0);
-        $this->assertTrue(strpos($text, 'Let find out') > 0);
-    }
 
     /**
      *  @dataProvider app
