@@ -40,7 +40,7 @@ use ReflectionClass;
 use InvalidArgumentException;
 use Notoj\Annotations;
 use Notoj\Dir;
-use Notoj\Object\zCallable;
+use Notoj\TObject\zCallable;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;

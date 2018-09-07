@@ -36,7 +36,7 @@
 */
 namespace crodas\Cli;
 
-use Notoj\Object\zCallable;
+use Notoj\TObject\zCallable;
 use crodas\FileUtil\File;
 use RuntimeException;
 
